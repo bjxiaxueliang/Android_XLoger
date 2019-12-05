@@ -1,0 +1,4 @@
+include ':app'
+// core
+include ':app_core:loger'
+rootProject.name='Android_QTest'
