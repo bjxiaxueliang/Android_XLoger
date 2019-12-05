@@ -1,11 +1,17 @@
-# 日志工具FileLoger
+# Android 日志工具
 
-该工具的作用为：
+最近项目开发中，遇到一个痛点：
+项目模块较多，不同日志混合在一起；出现线上问题时，所有日志信息混合在一起，定位困难。
+为解决这个问题，有了这个工具。这个工具有以下作用：
 
-+ 1、debug 为 true 时，打印在控制台，同时打印到文件； 
-+ 2、debug 为 fase 时，只打印到文件；
-+ 3、支持日志压缩上传；
-+ 4、支持不同功能模块，日志打印到不同文件中；
++ 开发模式
+debug 为 true 时，打印在控制台，同时打印到文件；
++ 发版模式
+debug 为 fase 时，只打印到文件；
++ 方便日志上传
+支持日志压缩上传
++ 缓存文件 区分模块
+支持不同功能模块，日志打印到不同文件中；
 
 ## 一、使用举例
 
@@ -26,7 +32,7 @@
 ![Screenshot_20191205_154950_com.huawei.hidisk](https://raw.githubusercontent.com/xiaxveliang/StoryImage/master/小书匠/Screenshot_20191205_154950_com.huawei.hidisk.jpg)
 
 
-## 一、使用方式
+## 二、使用方式
 
 
 + 初始化
@@ -34,7 +40,7 @@
 + 文件压缩上传
 
 
-### 1.1、初始化
+### 2.1、初始化
 
 初始化建议放到Application中
 
@@ -49,7 +55,7 @@
     }
 ```
 
-### 1.2、打日志
+### 2.2、打日志
 
 
 ``` java
@@ -59,7 +65,7 @@ PalUiLog.d(TAG, "---onCreate---");
 PalNetLog.d(TAG, "---onCreate---");
 ```
 
-### 1.2、文件压缩上传
+### 2.3、文件压缩上传
 
 
 ``` java
@@ -75,11 +81,9 @@ PalNetLog.d(TAG, "---onCreate---");
     }
 ```
 
-## 二、源码地址
+## 三、源码地址
 
 [https://github.com/xiaxveliang/Android_FileLoger](https://github.com/xiaxveliang/Android_FileLoger)
-
-
 
 
 
