@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
 
-    package="com.le.xiaxl.core.log">
+    package="com.xlog.core">
 
     <application
         android:allowBackup="true"
