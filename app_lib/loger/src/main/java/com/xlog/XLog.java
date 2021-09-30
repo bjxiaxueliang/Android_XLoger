@@ -2,13 +2,13 @@ package com.xlog;
 
 import android.content.Context;
 
-import com.xiaxl.log.core.XLoger;
+import com.xlog.core.XLoger;
 
 
 /**
  * create by xiaxl on 2019.12.05
  * <p>
- * 网络日志
+ * 日志
  */
 public class XLog {
     //
