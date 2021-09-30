@@ -1,4 +1,4 @@
-package com.xiaxl.log.core;
+package com.xlog.core;
 
 import android.content.Context;
 import android.os.Environment;
