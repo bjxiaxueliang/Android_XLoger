@@ -114,7 +114,7 @@ public class XLogCore {
     // 日志打印级别
     private final int mLogPrintLevel = Log.VERBOSE;
     //
-    // 日志缓存路径（内部缓存）：/data/data/%packetname%/files
+    // 日志缓存路径（内部缓存）：/data/data/%packetname%/files/xlog
     private String mLogFileDir;
     // 日志文件归档路径
     private String mLogFilingDir;
@@ -167,24 +167,10 @@ public class XLogCore {
         this.mContext = context;
         this.mDebugModel = debugModel;
 
-        // 创建缓存文件存储路径
-        synchronized (mLockObj) {
-            /**
-             * 读取sdcard文件
-             */
-            // 文件路径
-            mLogFileDir = XLogStoreUtil.getLogFileDir(mContext);
-            mLogFilingDir = XLogStoreUtil.getLogFilingDir(mContext);
-            // 从sdcard读取缓存的日志文件信息
-            mCurrLogFileInfo = XLogStoreUtil.readXLogInfoBySdcard(context, mLogFileDir);
-
-            /**
-             * sdcard文件未读取到
-             */
-            if (mCurrLogFileInfo == null) {
-                initXLogFileInfo();
-            }
-        }
+        /**
+         * 读取data/data下缓存日志文件
+         */
+        loadLogFileInfo();
     }
 
     /**
@@ -199,6 +185,9 @@ public class XLogCore {
      * 压缩日志文件 返回压缩后的文件存储路径
      * <p>
      * 建议：异步任务中执行
+     * <p>
+     * 日志文件在 未进行压缩时 ，存储于App内部存储 /data/data/包名/files/xlog 路径下。
+     * 日志文件 进行压缩后 ，存储到Sdcard存储 /sdcard/Android/data/包名/file/zip_log 路径下。
      *
      * @return
      */
@@ -207,6 +196,11 @@ public class XLogCore {
             Log.e("XLoger", "context need init");
             return "";
         }
+        if (TextUtils.isEmpty(mLogFileDir)) {
+            Log.e("XLoger", "mLogFileDir isEmpty");
+            return "";
+        }
+
         String logFileDir = mLogFileDir;
         //
         if (!TextUtils.isEmpty(logFileDir)) {
@@ -286,6 +280,10 @@ public class XLogCore {
                          @XLogCore.XLogModel int xLogModel, int logPrintLevel) {
         if (mContext == null) {
             Log.e("XLoger", "context need init");
+            return;
+        }
+        if (TextUtils.isEmpty(mLogFileDir)) {
+            Log.e("XLoger", "mLogFileDir isEmpty");
             return;
         }
         if (TextUtils.isEmpty(tagFromUser)) {
@@ -373,6 +371,39 @@ public class XLogCore {
     }
 
     // #############################################################################
+
+    /**
+     * 读取data/data下缓存日志文件信息
+     */
+    private void loadLogFileInfo() {
+        // 路径空
+        if (mContext == null) {
+            Log.e("XLoger", "context need init");
+            return;
+        }
+        // 异步读取文件信息
+        try {
+            if (XLogConfig.mExecutorService != null) {
+                XLogConfig.mExecutorService.submit(new Runnable() {
+                    public void run() {
+                        synchronized (mLockObj) {
+                            // 文件路径（内部存储路径）
+                            mLogFileDir = XLogStoreUtil.getLogFileDir(mContext);
+                            mLogFilingDir = XLogStoreUtil.getLogFilingDir(mContext);
+                            // 从对应文件夹中 读取 缓存的xlog文件信息
+                            mCurrLogFileInfo = XLogStoreUtil.readXLogInfoFromPath(mLogFileDir);
+                            // 路径下 文件未读取到
+                            if (mCurrLogFileInfo == null) {
+                                initXLogFileInfo();
+                            }
+                        }
+                    }
+                });
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
 
     /**
@@ -519,12 +550,12 @@ public class XLogCore {
 
 
         /**
-         * 从sdcard读取缓存的xlog文件信息
+         * 从对应文件夹中 读取 缓存的xlog文件信息
          *
-         * @param context
+         * @param logFileDir
          * @return
          */
-        public static XLogInfoBean readXLogInfoBySdcard(Context context, String logFileDir) {
+        public static XLogInfoBean readXLogInfoFromPath(String logFileDir) {
             // 数据bean
             XLogInfoBean xLogInfoBean = null;
             // 读取缓存路径中已存在的log文件
@@ -565,7 +596,7 @@ public class XLogCore {
                 return logFileDir;
             }
             // 创建log缓存文件路径
-            // /data/data/%packetname%/files/log/
+            // /data/data/%packetname%/files/xlog/
             StringBuffer sb = new StringBuffer();
             sb.append(context.getFilesDir().getPath());
             sb.append(File.separator);
