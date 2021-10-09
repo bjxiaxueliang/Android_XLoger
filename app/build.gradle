@@ -24,5 +24,5 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.0.2'
     implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
     // core —— 日志工具类
-    implementation project(path: ':app_lib:loger')
+    implementation project(path: ':app_lib:xloger')
 }

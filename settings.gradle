@@ -1,4 +1,4 @@
 include ':app'
 // core
-include ':app_lib:loger'
-rootProject.name='Android_FileLoger'
+include ':app_lib:xloger'
+rootProject.name='Android_XLoger'
