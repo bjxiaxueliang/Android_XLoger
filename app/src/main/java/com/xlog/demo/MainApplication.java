@@ -2,7 +2,8 @@ package com.xlog.demo;
 
 import android.app.Application;
 
-import com.xlog.XLog;
+import com.xlog.core.XLog;
+import com.xlog.core.XLogCore;
 
 
 public class MainApplication extends Application {
@@ -14,7 +15,7 @@ public class MainApplication extends Application {
     public void onCreate() {
         super.onCreate();
         // 初始化日志
-        XLog.onAppCreate(MainApplication.this, true);
+        XLog.onAppCreate(MainApplication.this, XLogCore.XLogModel.MODEL_DEBUG);
     }
 
     @Override

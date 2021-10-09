@@ -7,7 +7,7 @@ import android.text.TextUtils;
 import android.view.View;
 import android.widget.Toast;
 
-import com.xlog.XLog;
+import com.xlog.core.XLog;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -28,6 +28,13 @@ public class MainActivity extends AppCompatActivity {
                 zipLogFiles();
             }
         });
+
+        // exception 日志打印
+        try {
+            int tt = 5 / 0;
+        } catch (Exception e) {
+            XLog.d(TAG, "XLog Exception", e);
+        }
 
     }
 

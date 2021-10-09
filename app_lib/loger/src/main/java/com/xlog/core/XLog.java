@@ -1,8 +1,6 @@
-package com.xlog;
+package com.xlog.core;
 
 import android.content.Context;
-
-import com.xlog.core.XLoger;
 
 
 /**
@@ -12,13 +10,13 @@ import com.xlog.core.XLoger;
  */
 public class XLog {
     //
-    private static XLoger mLog = XLoger.getInstance();
+    private static XLogCore mLog = XLogCore.getInstance();
 
     /**
      * application进入 onCreate 时调用
      */
-    public static void onAppCreate(Context context, boolean isDebug) {
-        mLog.onAppCreate(context, isDebug);
+    public static void onAppCreate(Context context, @XLogCore.XLogModel int debugModel) {
+        mLog.onAppCreate(context, debugModel);
     }
 
     /**
@@ -37,19 +35,39 @@ public class XLog {
         mLog.v(tag, msg);
     }
 
+    public static void v(String tag, String msg, Throwable throwable) {
+        mLog.v(tag, msg, throwable);
+    }
+
     public static void d(String tag, String msg) {
         mLog.d(tag, msg);
+    }
+
+    public static void d(String tag, String msg, Throwable throwable) {
+        mLog.d(tag, msg, throwable);
     }
 
     public static void i(String tag, String msg) {
         mLog.i(tag, msg);
     }
 
+    public static void i(String tag, String msg, Throwable throwable) {
+        mLog.i(tag, msg, throwable);
+    }
+
     public static void w(String tag, String msg) {
         mLog.w(tag, msg);
     }
 
+    public static void w(String tag, String msg, Throwable throwable) {
+        mLog.w(tag, msg, throwable);
+    }
+
     public static void e(String tag, String msg) {
         mLog.e(tag, msg);
+    }
+
+    public static void e(String tag, String msg, Throwable throwable) {
+        mLog.e(tag, msg, throwable);
     }
 }

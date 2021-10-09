@@ -32,7 +32,76 @@ import java.util.zip.ZipOutputStream;
  * Log文件缓存目录：
  * /data/data/%packetname%/files/
  */
-public class XLoger {
+public class XLogCore {
+
+
+    /**
+     * 配置信息
+     */
+    private static class XLogConfig {
+
+        /**
+         * App可通过该tag 查看筛选日志信息
+         */
+        private static final String XLOG_TAG = "XLogCore";
+
+        /**
+         * 日志文件的构成：xlog_20201111_111111.txt
+         */
+        // 日志缓存文件夹
+        private static final String XLOG_FILE_DIR = "xlog";
+        // 日志归档文件夹（日志超过一定大小后，归档到该路径）
+        private static final String XLOG_FILING_DIR = "filing";
+        // 日志文件的最大长度(字节Byte) 15M
+        private static final int XLOG_FILE_MAXSIZE = 30 * 1024 * 1024;
+        // 默认 pre name
+        private static final String XLOG_FILE_NAME_PRE = "xlog_";
+        // 日志文件扩展名
+        private static final String XLOG_FILE_NAME_FORMAT = ".txt";
+
+        /**
+         * 输出控制
+         */
+        // 输出到控制台 or 输出到文件
+        private static final int SHOW_LOG_CONSOLE = 0x01; // 输出到控制台
+        private static final int SHOW_LOG_FILE = 0x10; // 输出到文件
+
+        /**
+         * 单线程池（用于异步写文件）
+         */
+        private static ExecutorService mExecutorService = Executors.newFixedThreadPool(1);
+
+        /**
+         * 日志压缩后的文件夹名称
+         */
+        // 压缩后的缓存文件 文件夹名称
+        private static final String XLOG_ZIP_DIR = "xlog_zip";
+    }
+
+    // 注解仅存在于源码中，在class字节码文件中不包含
+    @Retention(RetentionPolicy.SOURCE)
+    // 限定取值范围为{MODEL_DEBUG, MODEL_RELEASE}
+    @IntDef({XLogModel.MODEL_DEBUG, XLogModel.MODEL_RELEASE})
+    public @interface XLogModel {
+        // debug模式：打印到控制台 和 文件
+        int MODEL_DEBUG = XLogConfig.SHOW_LOG_CONSOLE | XLogConfig.SHOW_LOG_FILE;
+        // release模式：打印到文件
+        int MODEL_RELEASE = XLogConfig.SHOW_LOG_FILE;
+    }
+
+
+    /**
+     * 当前文件信息记录
+     */
+    public static class XLogInfoBean {
+        // 文件名 xlog_yyyyMMdd_HHmmss.txt
+        public String xLogName = "";
+        // 文件大小（字节大小）
+        public long xLogSize = 0;
+    }
+
+
+    // #############################################################################
 
 
     /**
@@ -53,8 +122,9 @@ public class XLoger {
     /**
      * 用户变量
      */
-    // debug 开关
-    private boolean isDebug = true;
+    // debug 开关 (默认为debug模式)
+    @XLogCore.XLogModel
+    private int mDebugModel = XLogModel.MODEL_DEBUG;
     // 当前文件信息记录
     private XLogInfoBean mCurrLogFileInfo = null;
     // 文件IO
@@ -64,17 +134,17 @@ public class XLoger {
     /**
      * 单例
      */
-    private static volatile XLoger instance;
+    private static volatile XLogCore instance;
 
-    private XLoger() {
+    private XLogCore() {
 
     }
 
-    public static XLoger getInstance() {
+    public static XLogCore getInstance() {
         if (instance == null) {
-            synchronized (XLoger.class) {
+            synchronized (XLogCore.class) {
                 if (instance == null) {
-                    instance = new XLoger();
+                    instance = new XLogCore();
                 }
             }
         }
@@ -85,14 +155,17 @@ public class XLoger {
 
     /**
      * application进入 onCreate 时调用
+     *
+     * @param context    application的context
+     * @param debugModel debug or release
      */
-    public void onAppCreate(Context context, boolean isDebug) {
+    public void onAppCreate(Context context, @XLogCore.XLogModel int debugModel) {
         if (context == null) {
             Log.e("XLoger", "context need init");
             return;
         }
         this.mContext = context;
-        this.isDebug = isDebug;
+        this.mDebugModel = debugModel;
 
         // 创建缓存文件存储路径
         synchronized (mLockObj) {
@@ -100,10 +173,10 @@ public class XLoger {
              * 读取sdcard文件
              */
             // 文件路径
-            mLogFileDir = XLogConfigUtil.getLogFileDir(mContext);
-            mLogFilingDir = XLogConfigUtil.getLogFilingDir(mContext);
+            mLogFileDir = XLogStoreUtil.getLogFileDir(mContext);
+            mLogFilingDir = XLogStoreUtil.getLogFilingDir(mContext);
             // 从sdcard读取缓存的日志文件信息
-            mCurrLogFileInfo = XLogConfigUtil.readXLogInfoBySdcard(context, mLogFileDir);
+            mCurrLogFileInfo = XLogStoreUtil.readXLogInfoBySdcard(context, mLogFileDir);
 
             /**
              * sdcard文件未读取到
@@ -138,7 +211,7 @@ public class XLoger {
         //
         if (!TextUtils.isEmpty(logFileDir)) {
             // 当前时间作为 zip文件 的文件名称
-            final String desZipFilePath = XLogConfigUtil.genDesZipFilePath(mContext);
+            final String desZipFilePath = XLogStoreUtil.genDesZipFilePath(mContext);
             File desZipFile = new File(desZipFilePath);
             // 内部缓存路径下 log 文件的缓存路径
             List<String> srcFilePaths = new ArrayList<String>();
@@ -158,43 +231,43 @@ public class XLoger {
 
 
     public void v(String tagFromUser, String msgFromUser) {
-        if (isDebug) {
-            showLog(tagFromUser, msgFromUser, XLogModel.MODEL_DEBUG, Log.VERBOSE);
-        } else {
-            showLog(tagFromUser, msgFromUser, XLogModel.MODEL_RELEASE, Log.VERBOSE);
-        }
+        XLogCore.this.v(tagFromUser, msgFromUser, null);
+    }
+
+    public void v(String tagFromUser, String msgFromUser, Throwable throwable) {
+        showLog(tagFromUser, msgFromUser, throwable, mDebugModel, Log.VERBOSE);
     }
 
     public void d(String tagFromUser, String msgFromUser) {
-        if (isDebug) {
-            showLog(tagFromUser, msgFromUser, XLogModel.MODEL_DEBUG, Log.DEBUG);
-        } else {
-            showLog(tagFromUser, msgFromUser, XLogModel.MODEL_RELEASE, Log.DEBUG);
-        }
+        XLogCore.this.d(tagFromUser, msgFromUser, null);
+    }
+
+    public void d(String tagFromUser, String msgFromUser, Throwable throwable) {
+        showLog(tagFromUser, msgFromUser, throwable, mDebugModel, Log.DEBUG);
     }
 
     public void i(String tagFromUser, String msgFromUser) {
-        if (isDebug) {
-            showLog(tagFromUser, msgFromUser, XLogModel.MODEL_DEBUG, Log.INFO);
-        } else {
-            showLog(tagFromUser, msgFromUser, XLogModel.MODEL_RELEASE, Log.INFO);
-        }
+        XLogCore.this.i(tagFromUser, msgFromUser, null);
+    }
+
+    public void i(String tagFromUser, String msgFromUser, Throwable throwable) {
+        showLog(tagFromUser, msgFromUser, throwable, mDebugModel, Log.INFO);
     }
 
     public void w(String tagFromUser, String msgFromUser) {
-        if (isDebug) {
-            showLog(tagFromUser, msgFromUser, XLogModel.MODEL_DEBUG, Log.WARN);
-        } else {
-            showLog(tagFromUser, msgFromUser, XLogModel.MODEL_RELEASE, Log.WARN);
-        }
+        XLogCore.this.w(tagFromUser, msgFromUser, null);
+    }
+
+    public void w(String tagFromUser, String msgFromUser, Throwable throwable) {
+        showLog(tagFromUser, msgFromUser, throwable, mDebugModel, Log.WARN);
     }
 
     public void e(String tagFromUser, String msgFromUser) {
-        if (isDebug) {
-            showLog(tagFromUser, msgFromUser, XLogModel.MODEL_DEBUG, Log.ERROR);
-        } else {
-            showLog(tagFromUser, msgFromUser, XLogModel.MODEL_RELEASE, Log.ERROR);
-        }
+        XLogCore.this.e(tagFromUser, msgFromUser, null);
+    }
+
+    public void e(String tagFromUser, String msgFromUser, Throwable throwable) {
+        showLog(tagFromUser, msgFromUser, throwable, mDebugModel, Log.ERROR);
     }
 
 
@@ -209,7 +282,8 @@ public class XLoger {
      * @param xLogModel     @XLoger.XLogModel
      * @param logPrintLevel log打印级别
      */
-    private void showLog(String tagFromUser, String msgFromUser, @XLoger.XLogModel int xLogModel, int logPrintLevel) {
+    private void showLog(String tagFromUser, String msgFromUser, Throwable throwable,
+                         @XLogCore.XLogModel int xLogModel, int logPrintLevel) {
         if (mContext == null) {
             Log.e("XLoger", "context need init");
             return;
@@ -224,19 +298,20 @@ public class XLoger {
             return;
         }
         // 输出到控制台
-        if ((xLogModel & XLogConfigUtil.SHOW_LOG_CONSOLE) != 0) {
-            logToConsole(tagFromUser, msgFromUser, logPrintLevel);
+        if ((xLogModel & XLogConfig.SHOW_LOG_CONSOLE) != 0) {
+            logToConsole(tagFromUser, msgFromUser, throwable, logPrintLevel);
         }
         // 输出到文件
-        if ((xLogModel & XLogConfigUtil.SHOW_LOG_FILE) != 0) {
+        if ((xLogModel & XLogConfig.SHOW_LOG_FILE) != 0) {
             //
             final String tagFromUser2File = tagFromUser;
             final String msgFromUser2File = msgFromUser;
+            final Throwable throwable2File = throwable;
             try {
-                if (XLogConfigUtil.mExecutorService != null) {
-                    XLogConfigUtil.mExecutorService.submit(new Runnable() {
+                if (XLogConfig.mExecutorService != null) {
+                    XLogConfig.mExecutorService.submit(new Runnable() {
                         public void run() {
-                            XLoger.this.logToFile(tagFromUser2File, msgFromUser2File);
+                            XLogCore.this.logToFile(tagFromUser2File, msgFromUser2File, throwable2File);
                         }
                     });
                 }
@@ -256,10 +331,10 @@ public class XLoger {
      * @param msgFromUser
      * @param level
      */
-    private void logToConsole(String tagFromUser, String msgFromUser, int level) {
+    private void logToConsole(String tagFromUser, String msgFromUser, Throwable throwable, int level) {
         // 日志打印
-        String logTag = XLogConfigUtil.XLOG_TAG;
-        String logMsg = getConsoleLogMsg(tagFromUser, msgFromUser);
+        String logTag = XLogConfig.XLOG_TAG;
+        String logMsg = getConsoleLogMsg(tagFromUser, msgFromUser, throwable);
         switch (level) {
             case Log.DEBUG:
                 Log.d(logTag, logMsg);
@@ -280,19 +355,22 @@ public class XLoger {
     }
 
     /**
-     * 组合用户 tagFromUser 与 msgFromUser
+     * 组合用户 tagFromUser + msgFromUser + Exception
      *
      * @param msgFromUser
      * @return
      */
-    private String getConsoleLogMsg(String tagFromUser, String msgFromUser) {
+    private String getConsoleLogMsg(String tagFromUser, String msgFromUser, Throwable throwable) {
         StringBuffer sb = new StringBuffer();
         sb.append(tagFromUser);
         sb.append(": ");
         sb.append(msgFromUser);
+        if (throwable != null) {
+            sb.append("\n");
+            sb.append(Log.getStackTraceString(throwable));
+        }
         return sb.toString();
     }
-
 
     // #############################################################################
 
@@ -303,7 +381,7 @@ public class XLoger {
      * @param tagFromUser
      * @param msgFromUser
      */
-    private void logToFile(String tagFromUser, String msgFromUser) {
+    private void logToFile(String tagFromUser, String msgFromUser, Throwable throwable) {
         // 路径空
         if (mContext == null) {
             Log.e("XLoger", "context need init");
@@ -311,21 +389,21 @@ public class XLoger {
         }
         synchronized (mLockObj) {
             // 要写入文件的日志信息
-            String printLogInfo = getFileLogMsg(tagFromUser, msgFromUser);
+            String printLogInfo = getFileLogMsg(tagFromUser, msgFromUser, throwable);
             try {
                 // 待输入的数据
                 byte[] d = printLogInfo.getBytes("utf-8");
                 //
                 // Log文件的缓存路径 /data/data/%packetname%/files/xlog_yyyyMMdd_HHmmss.txt
-                String logFilePath = XLogConfigUtil.getLogFilePath(mContext, mCurrLogFileInfo.xLogName);
+                String logFilePath = XLogStoreUtil.getLogFilePath(mContext, mCurrLogFileInfo.xLogName);
                 File logFile = new File(logFilePath);
 
                 /**
                  * 文件归档
                  */
-                if (mCurrLogFileInfo.xLogSize > XLogConfigUtil.XLOG_FILE_MAXSIZE) {
+                if (mCurrLogFileInfo.xLogSize > XLogConfig.XLOG_FILE_MAXSIZE) {
                     // 文件归档
-                    String logFilingPath = XLogConfigUtil.getLogFilingPath(mContext, mCurrLogFileInfo.xLogName);
+                    String logFilingPath = XLogStoreUtil.getLogFilingPath(mContext, mCurrLogFileInfo.xLogName);
                     File logFilingFile = new File(logFilingPath);
                     logFile.renameTo(logFilingFile);
                     /**
@@ -335,7 +413,7 @@ public class XLoger {
                     /**
                      * 向新文件路径中写入数据
                      */
-                    logToFile(tagFromUser, msgFromUser);
+                    logToFile(tagFromUser, msgFromUser, throwable);
                     return;
                 }
                 /**
@@ -369,22 +447,19 @@ public class XLoger {
      * @param msgFromUser
      * @return
      */
-    private String getFileLogMsg(String tagFromUser, String msgFromUser) {
-        // 日期 + AppTag
+    private String getFileLogMsg(String tagFromUser, String msgFromUser, Throwable throwable) {
+        // 日期 + 筛选tag + msg
         StringBuffer sb = new StringBuffer();
         sb.append("[");
         // 添加当前日期
         sb.append(TimeUtil.getFormatCurrTime());
         sb.append(" ");
         // 添加筛选tag
-        sb.append(XLogConfigUtil.XLOG_TAG);
+        sb.append(XLogConfig.XLOG_TAG);
         sb.append(" ");
         sb.append("] ");
-        // 添加用户日志
-        sb.append(tagFromUser);
-        sb.append(": ");
-        sb.append(msgFromUser);
-        //
+        // 添加用户tag + 日志msg + Exception
+        sb.append(getConsoleLogMsg(tagFromUser, msgFromUser, throwable));
         return sb.toString();
     }
 
@@ -416,7 +491,7 @@ public class XLoger {
             mCurrLogFileInfo = new XLogInfoBean();
         }
         // 创建新的缓存文件
-        mCurrLogFileInfo.xLogName = XLogConfigUtil.genLogFileNameByCurrTime();
+        mCurrLogFileInfo.xLogName = XLogStoreUtil.genLogFileNameByCurrTime();
         mCurrLogFileInfo.xLogSize = 0;
         // 关闭文件流
         closeFileStream();
@@ -438,45 +513,7 @@ public class XLoger {
     // #############################################################################
 
 
-    private static class XLogConfigUtil {
-
-        /**
-         * App可通过该tag 查看筛选日志信息
-         */
-        private static final String XLOG_TAG = "XLog";
-
-        /**
-         * 日志文件的构成：xlog_20201111_111111.txt
-         */
-        // 日志缓存文件夹
-        private static final String XLOG_FILE_DIR = "xlog";
-        // 日志归档文件夹（日志超过一定大小后，归档到该路径）
-        private static final String XLOG_FILING_DIR = "filing";
-        // 日志文件的最大长度(字节Byte) 15M
-        private static final int XLOG_FILE_MAXSIZE = 30 * 1024 * 1024;
-        // 默认 pre name
-        private static final String XLOG_FILE_NAME_PRE = "xlog_";
-        // 日志文件扩展名
-        private static final String XLOG_FILE_NAME_FORMAT = ".txt";
-
-        /**
-         * 输出控制
-         */
-        // 输出到控制台 or 输出到文件
-        private static final int SHOW_LOG_CONSOLE = 0x01; // 输出到控制台
-        private static final int SHOW_LOG_FILE = 0x10; // 输出到文件
-
-        /**
-         * 单线程池（用于异步写文件）
-         */
-        private static ExecutorService mExecutorService = Executors.newFixedThreadPool(1);
-
-        /**
-         * 日志压缩后的文件夹名称
-         */
-        // 压缩后的缓存文件 文件夹名称
-        private static final String XLOG_ZIP_DIR = "xlog_zip";
-
+    public static class XLogStoreUtil {
 
         // ####################################
 
@@ -487,7 +524,7 @@ public class XLoger {
          * @param context
          * @return
          */
-        private static XLogInfoBean readXLogInfoBySdcard(Context context, String logFileDir) {
+        public static XLogInfoBean readXLogInfoBySdcard(Context context, String logFileDir) {
             // 数据bean
             XLogInfoBean xLogInfoBean = null;
             // 读取缓存路径中已存在的log文件
@@ -500,8 +537,8 @@ public class XLoger {
                         String fileName = file.getName();
                         long fileSize = file.length();
                         if (!TextUtils.isEmpty(fileName)
-                                && fileName.startsWith(XLogConfigUtil.XLOG_FILE_NAME_PRE)
-                                && fileName.endsWith(XLogConfigUtil.XLOG_FILE_NAME_FORMAT)) {
+                                && fileName.startsWith(XLogConfig.XLOG_FILE_NAME_PRE)
+                                && fileName.endsWith(XLogConfig.XLOG_FILE_NAME_FORMAT)) {
                             // 赋值
                             xLogInfoBean = new XLogInfoBean();
                             xLogInfoBean.xLogName = fileName;
@@ -522,7 +559,7 @@ public class XLoger {
          * @param context
          * @return
          */
-        private static String getLogFileDir(Context context) {
+        public static String getLogFileDir(Context context) {
             String logFileDir = "";
             if (context == null) {
                 return logFileDir;
@@ -532,7 +569,7 @@ public class XLoger {
             StringBuffer sb = new StringBuffer();
             sb.append(context.getFilesDir().getPath());
             sb.append(File.separator);
-            sb.append(XLogConfigUtil.XLOG_FILE_DIR);
+            sb.append(XLogConfig.XLOG_FILE_DIR);
             logFileDir = sb.toString();
             return logFileDir;
         }
@@ -544,12 +581,12 @@ public class XLoger {
          * @param fileName xlog_20201111_111111.txt
          * @return
          */
-        private static String getLogFilePath(Context context, String fileName) {
+        public static String getLogFilePath(Context context, String fileName) {
 
             // 创建log缓存文件路径
             // /data/data/%packetname%/files/log/
             StringBuffer sb = new StringBuffer();
-            sb.append(XLogConfigUtil.getLogFileDir(context));
+            sb.append(XLogStoreUtil.getLogFileDir(context));
             sb.append(File.separator);
             sb.append(fileName);
             return sb.toString();
@@ -561,14 +598,14 @@ public class XLoger {
          * @param context
          * @return
          */
-        private static String getLogFilingDir(Context context) {
+        public static String getLogFilingDir(Context context) {
             if (context == null) {
                 return "";
             }
             StringBuffer sb = new StringBuffer();
-            sb.append(XLogConfigUtil.getLogFileDir(context));
+            sb.append(XLogStoreUtil.getLogFileDir(context));
             sb.append(File.separator);
-            sb.append(XLogConfigUtil.XLOG_FILING_DIR);
+            sb.append(XLogConfig.XLOG_FILING_DIR);
             return sb.toString();
         }
 
@@ -585,7 +622,7 @@ public class XLoger {
             // 创建log缓存文件路径
             // /data/data/%packetname%/files/log/
             StringBuffer sb = new StringBuffer();
-            sb.append(XLogConfigUtil.getLogFilingDir(context));
+            sb.append(XLogStoreUtil.getLogFilingDir(context));
             sb.append(File.separator);
             sb.append(fileName);
             return sb.toString();
@@ -602,9 +639,9 @@ public class XLoger {
             // 生成文件路径
             StringBuffer sb = new StringBuffer();
             // file name
-            sb.append(XLogConfigUtil.XLOG_FILE_NAME_PRE);
+            sb.append(XLogConfig.XLOG_FILE_NAME_PRE);
             sb.append(currTime);
-            sb.append(XLogConfigUtil.XLOG_FILE_NAME_FORMAT);
+            sb.append(XLogConfig.XLOG_FILE_NAME_FORMAT);
             // 打开对应文件
             return sb.toString();
         }
@@ -619,41 +656,18 @@ public class XLoger {
         public static String genDesZipFilePath(Context context) {
             StringBuffer sb = new StringBuffer();
             // 图片文件夹路径
-            sb.append(SdCardUtil.getPrivateFilePath(context, XLogConfigUtil.XLOG_ZIP_DIR));
+            sb.append(SdCardUtil.getPrivateFilePath(context, XLogConfig.XLOG_ZIP_DIR));
             sb.append(File.separator);
-            sb.append(XLogConfigUtil.XLOG_FILE_NAME_PRE);
+            sb.append(XLogConfig.XLOG_FILE_NAME_PRE);
             // 以时间命令log文件
             sb.append(TimeUtil.getFormatCurrTime());
             // 扩展名
             sb.append(".zip");
             return sb.toString();
         }
+
     }
 
-    // 注解仅存在于源码中，在class字节码文件中不包含
-    @Retention(RetentionPolicy.SOURCE)
-    // 限定取值范围为{MODEL_DEBUG, MODEL_RELEASE}
-    @IntDef({XLogModel.MODEL_DEBUG, XLogModel.MODEL_RELEASE})
-    public @interface XLogModel {
-        // debug模式：打印到控制台 和 文件
-        int MODEL_DEBUG = XLogConfigUtil.SHOW_LOG_CONSOLE | XLogConfigUtil.SHOW_LOG_FILE;
-        // release模式：打印到文件
-        int MODEL_RELEASE = XLogConfigUtil.SHOW_LOG_FILE;
-    }
-
-
-    /**
-     * 当前文件信息记录
-     */
-    public static class XLogInfoBean {
-        // 文件名 xlog_yyyyMMdd_HHmmss.txt
-        public String xLogName = "";
-        // 文件大小（字节大小）
-        public long xLogSize = 0;
-    }
-
-
-    // #############################################################################
 
     /**
      * 时间工具类

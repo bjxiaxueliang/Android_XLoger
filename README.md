@@ -41,20 +41,19 @@ debug 为 fase 时，只打印到文件；
 初始化建议放到Application中
 
 ```java
-public class MainApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
         // 初始化日志
-        XLog.onAppCreate(MainApplication.this, true);
+        XLog.onAppCreate(MainApplication.this, XLogCore.XLogModel.MODEL_DEBUG);
     }
+
     @Override
     public void onTrimMemory(int level) {
         super.onTrimMemory(level);
         // 程序在内存清理的时候执行
         XLog.onAppTrimMemory();
     }
-}
 ```
 
 ### 2.2、打日志
