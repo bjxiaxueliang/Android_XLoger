@@ -28,21 +28,19 @@ Android项目开发中，需要将Log同时输出到`控制台` 与 `文件`，�
 
 ## 一、效果举例
 
-#### 1.1 日志 输出到 控制台
+### 1.1 日志 输出到 控制台
 日志输出到控制台，同时支持`日志筛选关键词`、`打印Excetption日志`。
 ![在这里插入图片描述](https://img-blog.csdnimg.cn/188f9ad7f754432ab033323f1062a91b.png?x-oss-process=image/watermark,type_ZHJvaWRzYW5zZmFsbGJhY2s,shadow_50,text_Q1NETiBAYmp4aWF4dWVsaWFuZw==,size_20,color_FFFFFF,t_70,g_se,x_16#pic_center)
-#### 1.2 日志 输出到 文件
+### 1.2 日志 输出到 文件
 日志默认输出到，同时支持`日志筛选关键词`、`打印Excetption日志`。
 
-日志文件在 `未进行压缩时 `，存储于App内部存储 `/data/data/包名/files/xlog` 路径下。
-日志文件 `进行压缩后 `，存储到Sdcard存储 `/sdcard/Android/data/包名/file/zip_log` 路径下。
++ 日志文件在 `未进行压缩时 `，存储于App内部存储 `/data/data/包名/files/xlog` 路径下。
+![在这里插入图片描述](https://img-blog.csdnimg.cn/87daa758364e4d45b2ad9c35f5245176.png#pic_center)
 
-+ 压缩后的日志文件路径：
++ 日志文件 `进行压缩后 `，存储到Sdcard存储 `/sdcard/Android/data/包名/file/zip_log` 路径下。
+![在这里插入图片描述](https://img-blog.csdnimg.cn/6d3518598f474b4a8595a5ebc71dc6c9.png?x-oss-process=image/watermark,type_ZHJvaWRzYW5zZmFsbGJhY2s,shadow_50,text_Q1NETiBAYmp4aWF4dWVsaWFuZw==,size_14,color_FFFFFF,t_70,g_se,x_16#pic_center)
 
-![在这里插入图片描述](https://img-blog.csdnimg.cn/418d0b7396cd419eac4e1c3fd9ac6f5d.png?x-oss-process=image/watermark,type_ZHJvaWRzYW5zZmFsbGJhY2s,shadow_50,text_Q1NETiBAYmp4aWF4dWVsaWFuZw==,size_14,color_FFFFFF,t_70,g_se,x_16#pic_center)
-
-
-+ 压缩后的日志文件：
++ 写入日志文件的数据如下：
 ![请添加图片描述](https://img-blog.csdnimg.cn/bae8ec26dc9c48e69901ccfbddd3fb08.png?x-oss-process=image/watermark,type_ZHJvaWRzYW5zZmFsbGJhY2s,shadow_50,text_Q1NETiBAYmp4aWF4dWVsaWFuZw==,size_20,color_FFFFFF,t_70,g_se,x_16)
 
 ## 二、使用方式
