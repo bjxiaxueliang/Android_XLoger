@@ -84,11 +84,9 @@ public class XLoger {
     // #############################################################################
 
     /**
-     * 初始化文件路径
-     *
-     * @param context
+     * application进入 onCreate 时调用
      */
-    public void init(Context context, boolean isDebug) {
+    public void onAppCreate(Context context, boolean isDebug) {
         if (context == null) {
             Log.e("XLoger", "context need init");
             return;
@@ -114,6 +112,13 @@ public class XLoger {
                 initXLogFileInfo();
             }
         }
+    }
+
+    /**
+     * application进入 onTrimMemory 时调用
+     */
+    public void onAppTrimMemory() {
+        closeFileStream();
     }
 
 
@@ -413,6 +418,11 @@ public class XLoger {
         // 创建新的缓存文件
         mCurrLogFileInfo.xLogName = XLogConfigUtil.genLogFileNameByCurrTime();
         mCurrLogFileInfo.xLogSize = 0;
+        // 关闭文件流
+        closeFileStream();
+    }
+
+    private void closeFileStream() {
         // 关闭文件流
         try {
             if (mCurrLogFileStream != null) {

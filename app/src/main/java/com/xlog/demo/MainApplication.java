@@ -2,15 +2,25 @@ package com.xlog.demo;
 
 import android.app.Application;
 
-import com.xiaxl.log.XLog;
+import com.xlog.XLog;
+
 
 public class MainApplication extends Application {
+
+    private static final String TAG = "MainApplication";
 
 
     @Override
     public void onCreate() {
         super.onCreate();
         // 初始化日志
-        XLog.init(MainApplication.this, true);
+        XLog.onAppCreate(MainApplication.this, true);
+    }
+
+    @Override
+    public void onTrimMemory(int level) {
+        super.onTrimMemory(level);
+        // 程序在内存清理的时候执行
+        XLog.onAppTrimMemory();
     }
 }

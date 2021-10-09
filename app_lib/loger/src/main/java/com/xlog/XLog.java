@@ -14,9 +14,18 @@ public class XLog {
     //
     private static XLoger mLog = XLoger.getInstance();
 
-    // 初始化
-    public static void init(Context context, boolean isDebug) {
-        mLog.init(context, isDebug);
+    /**
+     * application进入 onCreate 时调用
+     */
+    public static void onAppCreate(Context context, boolean isDebug) {
+        mLog.onAppCreate(context, isDebug);
+    }
+
+    /**
+     * application进入 onLowMemory 时调用
+     */
+    public static void onAppTrimMemory() {
+        mLog.onAppTrimMemory();
     }
 
     // 压缩日志文件到sdcard中
