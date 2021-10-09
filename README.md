@@ -64,7 +64,7 @@ public class MainApplication extends Application {
         super.onCreate();
         // Application的onCreate方法中进行XLog初始化
         // 初始化日志（debug模式 日志输出到）
-        XLog.onAppCreate(MainApplication.this, XLogCore.XLogModel.MODEL_DEBUG);
+        XLog.onAppCreate(MainApplication.this, true);
     }
 
     @Override
@@ -124,8 +124,8 @@ public class XLog {
     private static XLogCore mLog = XLogCore.getInstance();
 
     // application进入 onCreate 时调用
-    public static void onAppCreate(Context context, @XLogCore.XLogModel int debugModel) {
-        mLog.onAppCreate(context, debugModel);
+    public static void onAppCreate(Context context, boolean isDebug) {
+        mLog.onAppCreate(context, isDebug ? XLogCore.XLogModel.MODEL_DEBUG : XLogCore.XLogModel.MODEL_RELEASE);
     }
     // application进入 onLowMemory 时调用
     public static void onAppTrimMemory() {
