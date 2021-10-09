@@ -15,7 +15,7 @@ public class MainApplication extends Application {
     public void onCreate() {
         super.onCreate();
         // 初始化日志
-        XLog.onAppCreate(MainApplication.this, XLogCore.XLogModel.MODEL_DEBUG);
+        XLog.onAppCreate(MainApplication.this, true);
     }
 
     @Override
