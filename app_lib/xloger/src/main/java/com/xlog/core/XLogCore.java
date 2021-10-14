@@ -687,7 +687,7 @@ public class XLogCore {
         public static String genDesZipFilePath(Context context) {
             StringBuffer sb = new StringBuffer();
             // 图片文件夹路径
-            sb.append(SdCardUtil.getPrivateFilePath(context, XLogConfig.XLOG_ZIP_DIR));
+            sb.append(SdCardUtil.getAppExternalCacheDir(context, XLogConfig.XLOG_ZIP_DIR));
             sb.append(File.separator);
             sb.append(XLogConfig.XLOG_FILE_NAME_PRE);
             // 以时间命令log文件
@@ -733,30 +733,18 @@ public class XLogCore {
      */
     public static class SdCardUtil {
 
-
         /**
-         * 获取应用私有file目录
+         * 获取应用私有cache目录
          * <p>
-         * /sdcard/Android/data/包名/file/dir
-         *
-         * @param dir The type of files directory to return. May be {@code null}
-         *            for the root of the files directory or one of the following
-         *            constants for a subdirectory:
-         *            {@link Environment#DIRECTORY_MUSIC},
-         *            {@link Environment#DIRECTORY_PODCASTS},
-         *            {@link Environment#DIRECTORY_RINGTONES},
-         *            {@link Environment#DIRECTORY_ALARMS},
-         *            {@link Environment#DIRECTORY_NOTIFICATIONS},
-         *            {@link Environment#DIRECTORY_PICTURES}, or
-         *            {@link Environment#DIRECTORY_MOVIES}.
+         * /sdcard/Android/data/包名/cache
          */
-        public static String getPrivateFilePath(Context context, String dir) {
-            File file = context.getExternalFilesDir(dir);
+        public static String getAppExternalCacheDir(Context context, String dir) {
+            File file = context.getExternalCacheDir();
             //先判断外部存储是否可用
             if (Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState()) && file != null) {
-                return file.getAbsolutePath();
+                return file.getAbsolutePath() + File.separator + dir;
             } else {
-                return context.getFilesDir() + File.separator + dir;
+                return context.getCacheDir().getAbsolutePath() + File.separator + dir;
             }
         }
     }
